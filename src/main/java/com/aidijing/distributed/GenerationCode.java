@@ -7,6 +7,8 @@
  */
 package com.aidijing.distributed;
 
+import org.apache.commons.lang3.RandomStringUtils;
+
 import java.lang.management.ManagementFactory;
 import java.net.NetworkInterface;
 import java.nio.BufferUnderflowException;
@@ -15,7 +17,6 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Enumeration;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
@@ -27,17 +28,16 @@ public final class GenerationCode {
     private static final String MP;
     /** 截取长度: 从最后面开始截取 */
     private static final int               MP_LEN              = 6;
-    /** 日期格式化 */
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern( "yyyyMMddHHmmss" );
+    /** 日期格式化,是线程安全的 */
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern( "yyyyMMddHHmmssSSS" );
     /** 原子类 */
     private static final LongAdder         LONG_ADDER          = new LongAdder();
 
+
     static {
         try {
-            // 机器码 --> 本机 mac 地址的 hashcode 值
-            int machineIdentifier = createMachineIdentifier();
-            // 进程号 --> 当前运行的 jvm 进程号的 hashcode 值
-            int    processIdentifier = createProcessIdentifier();
+            int    machineIdentifier = createMachineIdentifier(); // 机器码 --> 本机 mac 地址的 hashcode 值
+            int    processIdentifier = createProcessIdentifier(); // 进程号 --> 当前运行的 jvm 进程号的 hashcode 值
             String mp                = Integer.toString( Math.abs( ( machineIdentifier + "" + processIdentifier ).hashCode() ) );
             MP = ( mp.length() > MP_LEN ) ? mp.substring( mp.length() - MP_LEN, mp.length() ) : mp;
         } catch ( Exception e ) {
@@ -52,7 +52,7 @@ public final class GenerationCode {
      */
     public static String globalUniqueId () {
         LONG_ADDER.increment();
-        final long   randomNumber = ThreadLocalRandom.current().nextLong( 1000000, 9999999 ); // 随机数
+        final String randomNumber = RandomStringUtils.randomNumeric( 10 ); // 随机数,该工具类是线程安全的
         final String now          = DATE_TIME_FORMATTER.format( LocalDateTime.now() ); // 时间
         final long   nextNumber   = LONG_ADDER.longValue(); // 下一个数
         return MP + Thread.currentThread().getId() + randomNumber + now + nextNumber;
